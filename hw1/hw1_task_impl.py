@@ -50,7 +50,7 @@ def make_compute_fn(num_ops: int, compiled: bool = True):
             acc = acc * x + x
         return acc
     
-    # When compiled, torch.comple (Inductor) fuses the whole loop into ~one kernel: one read, one write, all FLOP's in registers.
+    # When compiled, torch.compile (Inductor) fuses the whole loop into ~one kernel: one read, one write, all FLOPs in registers.
     # When eager, each '*' and '+' launches its own kernel and round-trips through global memory.
 
     # TODO (1 line): return either `fn` or `torch.compile(fn)` based on `compiled`
@@ -80,7 +80,7 @@ def benchmark_fn(fn, *args, warmup=25, rep=100) -> float:
     # Time 'rep' runs with CUDA events. Events are timestamps recorded *on the GPU stream*,
     # so elapsed_time measures real device execution time and is not polluted by Python / launch 
     # overhead the way time.perf_counter() would be. 
-    # We record a start/end pair around each run, then synchornize ONCE at the end so we don't serialise the GPU between iterations.
+    # We record a start/end pair around each run, then synchronise once at the end so we don't serialise the GPU between iterations.
     start_events = [torch.cuda.Event(enable_timing=True) for _ in range(rep)]
     end_events = [torch.cuda.Event(enable_timing=True) for _ in range(rep)]
     for i in range(rep):
@@ -123,7 +123,7 @@ def compute_elementwise_metrics(num_elements, num_ops, bytes_per_element, ms, va
         # Byte traffic is independent of num_ops, so AI = (2 * num_ops) / (2 * bytes_per_element) grows linearly with num_ops.
         bytes_moved = num_elements * bytes_per_element * 2
     else: # eager
-        # Eager mode launches a sepearte kernel for each '*' and '+', and materialises the intermediate tensor to global memory.
+        # Eager mode launches a seperate kernel for each '*' and '+', and materialises the intermediate tensor to global memory.
         # Per FMA iteration that is 2 ops, and each binary op moves ~3 element-sized tensors (2 reads + 1 write) = 6 element accesses per iteration.
         # Byte traffic now scales with num_ops, so AI stays low and ~constant (2 / (6 * bytes_per_element) ~= 0.083 FLOP/Byte).
         # The points do not move right, which is the point of the eager-vs-compiled contrast.
